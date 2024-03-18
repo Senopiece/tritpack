@@ -80,10 +80,10 @@ for affect in affects:
     print(f"Defect type: {affect.__name__}")
     for _ in tqdm(range(runs)):
         # generate
-        bits = "".join(random.choice("01") for _ in range(packet_len))
+        msg = int("".join(random.choice("01") for _ in range(packet_len)), 2)
 
         # encode
-        encoded = encode(bits)
+        encoded = encode(msg)
 
         # convert to extended bits
         ebits = "".join(CODES[trit.value] for trit in encoded)
@@ -109,11 +109,11 @@ for affect in affects:
             decoded = decode(gotetrits)
 
             # verify
-            if not had_defects and decoded != bits and not truncated:
-                print("Expected:", bits)
+            if not had_defects and decoded != msg and not truncated:
+                print("Expected:", msg)
                 print("Decoded:", decoded)
                 raise Exception("NOT ACCEPTABLE! Invalid decoding of a valid packet")
-            elif had_defects and decoded == bits:
+            elif had_defects and decoded == msg:
                 corrected_defects += 1
 
         except ValueError:

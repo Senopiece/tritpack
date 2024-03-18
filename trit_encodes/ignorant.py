@@ -1,7 +1,9 @@
 from datastructs import Trit
 
 
-def encode(bits: str) -> list[Trit]:
+def encode(n: int) -> list[Trit]:
+    assert n >= 0
+    bits = bin(n)[2:]
     res = [None] * len(bits)
     for i, bit in enumerate(bits):
         res[i] = Trit.A if bit == "0" else Trit.B  # type: ignore
@@ -11,4 +13,4 @@ def encode(bits: str) -> list[Trit]:
 def decode(trits: list[Trit]):
     if Trit.C in trits:
         raise ValueError()
-    return "".join("0" if trit.value == Trit.A.value else "1" for trit in trits)
+    return int("".join("0" if trit.value == Trit.A.value else "1" for trit in trits), 2)

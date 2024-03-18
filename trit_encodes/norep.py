@@ -23,7 +23,10 @@ CMAP = {
 }
 
 
-def encode(bits: str):
+def encode(n: int):
+    assert n >= 0
+    bits = bin(n)[2:]
+
     # special cases for 1's or 0's
     if len(bits) % 2 == 1:
         if all(bit == "0" for bit in bits):
@@ -99,4 +102,4 @@ def decode(trits: list[Trit]):
         res += decoder[curr_trit]
         prev_trit = curr_trit
 
-    return res
+    return int(res, 2)

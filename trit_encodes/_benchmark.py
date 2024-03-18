@@ -2,7 +2,7 @@ import random
 
 from tqdm import tqdm
 from datastructs import Trit
-from trit_encodes import norep, ignorant
+from trit_encodes import norep
 
 bdc = 0.01  # chance for a bit to be defect
 ldc = 0.01  # chance for a bit to be a start of a line of defects
@@ -66,11 +66,16 @@ def data_shift(ebits: str):
     return res + ("0" if len(res) % 2 == 1 else "")
 
 
-for affect in (spread, near, const_line, data_shift):
+ts = 0
+
+affects = (spread, near, const_line, data_shift)
+
+for affect in affects:
     defected = 0
     found_defects = 0
     truncated_count = 0
     found_truncated = 0
+    corrected_defects = 0
 
     print(f"Defect type: {affect.__name__}")
     for _ in tqdm(range(runs)):
@@ -108,6 +113,8 @@ for affect in (spread, near, const_line, data_shift):
                 print("Expected:", bits)
                 print("Decoded:", decoded)
                 raise Exception("NOT ACCEPTABLE! Invalid decoding of a valid packet")
+            elif had_defects and decoded == bits:
+                corrected_defects += 1
 
         except ValueError:
             if not had_defects:
@@ -117,9 +124,21 @@ for affect in (spread, near, const_line, data_shift):
                 found_truncated += 1
 
     print(f"Was defected: {defected}/{runs} ({defected/runs*100:.1f}%)")
-    print(f"Found defects: {found_defects}/{runs} ({found_defects/runs*100:.1f}%)")
-    print(f"Truncated: {truncated_count}/{runs} ({truncated_count/runs*100:.1f}%)")
     print(
-        f"Found truncated: {found_truncated}/{runs} ({found_truncated/runs*100:.1f}%)"
+        f"Found defects: {found_defects}/{defected} ({found_defects/defected*100:.1f}%)"
     )
+    print(
+        f"Corrected defects: {corrected_defects}/{defected} ({corrected_defects/defected*100:.1f}%)"
+    )
+    print(
+        f"Truncated: {truncated_count}/{defected} ({truncated_count/defected*100:.1f}%)"
+    )
+    print(
+        f"Found truncated: {found_truncated}/{truncated_count} ({found_truncated/truncated_count*100:.1f}%)"
+    )
+    score = (found_defects + corrected_defects) / defected
+    ts += score
+    print(f"Score: {score :.2f}")
     print()
+
+print(f"Mean score: {ts / len(affects):.2f}")

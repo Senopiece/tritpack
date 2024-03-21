@@ -75,7 +75,7 @@ RCMAP = {
 
 def decode(trits: list[Trit]):
     if len(trits) == 0:
-        return ""
+        return 0
 
     # first check for the special cases of 1's and 0's
     if len(trits) % 2 == 1 and trits[0].value != Trit.C.value:
@@ -90,7 +90,7 @@ def decode(trits: list[Trit]):
                 break
 
         if matched:
-            return "0" * len(trits) if key == 0 else "1" * len(trits)
+            return int("0" * len(trits) if key == 0 else "1" * len(trits), 2)
 
     # check no repetitions and restore bits
     prev_trit = trits[-1]

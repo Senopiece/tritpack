@@ -2,16 +2,16 @@ import random
 
 from tqdm import tqdm
 from datastructs import Trit
-from trit_encodes import norep
+from trit_encodes import checksum
 
 bdc = 0.01  # chance for a bit to be defect
 ldc = 0.01  # chance for a bit to be a start of a line of defects
 dl = 4  # mean defect length
 dso = 2  # mean data offset in data shift
-packet_len = 64
+packet_len = 200
 runs = 10000
-encode = norep.encode
-decode = norep.decode
+encode = checksum.encode
+decode = checksum.decode
 
 CODES = ("01", "10", "11")
 RCODES = {
@@ -128,6 +128,14 @@ for affect in affects:
         f"Found defects: {found_defects}/{defected} ({found_defects/defected*100:.1f}%)"
     )
     print(
+        "Miss rate:",
+        (
+            f"1 per {defected//(defected - found_defects)} defects"
+            if defected != found_defects
+            else "unknown"
+        ),
+    )
+    print(
         f"Corrected defects: {corrected_defects}/{defected} ({corrected_defects/defected*100:.1f}%)"
     )
     print(
@@ -138,7 +146,7 @@ for affect in affects:
     )
     score = (found_defects + corrected_defects) / defected
     ts += score
-    print(f"Score: {score :.2f}")
+    print(f"Score: {score*100 :.2f}")
     print()
 
-print(f"Mean score: {ts / len(affects):.2f}")
+print(f"Mean score: {ts*100 / len(affects):.2f}")

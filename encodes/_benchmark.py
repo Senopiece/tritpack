@@ -1,69 +1,63 @@
 import random
+from typing import List
 
 from tqdm import tqdm
-from datastructs import Trit
-from trit_encodes import checksum
+from datastructs import Octet, Smit
+from encodes import checksum
 
 bdc = 0.01  # chance for a bit to be defect
 ldc = 0.01  # chance for a bit to be a start of a line of defects
 dl = 4  # mean defect length
 dso = 2  # mean data offset in data shift
-packet_len = 200
+packet_len = 128  # as it would be in bits
 runs = 10000
 encode = checksum.encode
 decode = checksum.decode
 
-CODES = ("01", "10", "11")
-RCODES = {
-    "01": Trit.A,
-    "10": Trit.B,
-    "11": Trit.C,
-}
+
+def defect(octet: Octet):
+    return Octet((octet.value + random.randint(1, 7)) % 8)
 
 
-def defect(bit: str):
-    return "1" if bit == "0" else "0"
+def spread(octets: List[Octet]):
+    return list(defect(octet) if random.random() < bdc else octet for octet in octets)
 
 
-def spread(ebits: str):
-    return "".join(defect(bit) if random.random() < bdc else bit for bit in ebits)
-
-
-def near(ebits: str):
+def near(octets: List[Octet]):
     c = -1
-    res = ""
-    for bit in ebits:
+    res: List[Octet] = []
+    for octet in octets:
         if random.random() < ldc:
             c = dl
-        res += defect(bit) if c > 0 else bit
+        res.append(defect(octet) if c > 0 else octet)
         c -= 1
     return res
 
 
-def const_line(ebits: str):
+def const_line(octets: List[Octet]):
     c = -1
-    s = random.choice("01")
-    res = ""
-    for bit in ebits:
+    s = Octet(random.randint(0, 7))
+    res: List[Octet] = []
+    for octet in octets:
         if random.random() < ldc:
             c = max(1, int(random.normalvariate(dl, 2)))
-            s = random.choice("01")
-        res += s if c > 0 else bit
+            s = Octet(random.randint(0, 7))
+        res.append(s if c > 0 else octet)
         c -= 1
     return res
 
 
-def data_shift(ebits: str):
+def data_shift(octets: List[Octet]):
     c = 0
-    res = ""
-    for i in range(len(ebits)):
+    res: List[Octet] = []
+    for i in range(len(octets)):
         if random.random() < ldc:
             c += max(1, int(random.normalvariate(dso, 2)))
         i += c
-        if i >= len(ebits):
+        if i >= len(octets):
             break
-        res += ebits[i]
-    return res + ("0" if len(res) % 2 == 1 else "")
+        res.append(octets[i])
+    return res
 
 
 ts = 0
@@ -79,34 +73,33 @@ for affect in affects:
 
     print(f"Defect type: {affect.__name__}")
     for _ in tqdm(range(runs)):
-        # generate
+        # generate msg on the carrier signal
         msg = int("".join(random.choice("01") for _ in range(packet_len)), 2)
 
         # encode
         encoded = encode(msg)
 
-        # convert to extended bits
-        ebits = "".join(CODES[trit.value] for trit in encoded)
+        # convert to carrying signal
+        signal = list(Octet(smit.value + 1) for smit in encoded)
 
         # corrupt
-        gotebits = affect(ebits)
-        had_defects = ebits != gotebits
+        got_signal = affect(signal)
+        had_defects = signal != got_signal
         defected += 1 if had_defects else 0
 
         truncated = False
 
-        gotetrits: list[Trit] = []
-        for i in range(len(gotebits) // 2):
-            couple = gotebits[2 * i] + gotebits[2 * i + 1]
-            if couple == "00":
+        got_smits: list[Smit] = []
+        for octet in got_signal:
+            if octet.value == 0:
                 truncated = True
                 truncated_count += 1
                 break
-            gotetrits.append(RCODES[couple])
+            got_smits.append(Smit(octet.value - 1))
 
         # decode
         try:
-            decoded = decode(gotetrits)
+            decoded = decode(got_smits)
 
             # verify
             if not had_defects and decoded != msg and not truncated:
@@ -142,7 +135,12 @@ for affect in affects:
         f"Truncated: {truncated_count}/{defected} ({truncated_count/defected*100:.1f}%)"
     )
     print(
-        f"Found truncated: {found_truncated}/{truncated_count} ({found_truncated/truncated_count*100:.1f}%)"
+        "Found truncated:",
+        (
+            f"{found_truncated}/{truncated_count} ({found_truncated/truncated_count*100:.1f}%)"
+            if truncated_count != 0
+            else "N/A"
+        ),
     )
     score = (found_defects + corrected_defects) / defected
     ts += score

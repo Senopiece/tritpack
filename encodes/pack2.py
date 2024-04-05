@@ -15,6 +15,7 @@ def _count_semiary_digits(n: int):
 
 def _s(smits_l: int):
     return (pow(7, smits_l) - 1) // 6 - 1
+    # return int('1' * (s - 1) + '0', 7)
 
 
 def encode(n: int):
